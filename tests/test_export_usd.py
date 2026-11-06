@@ -264,10 +264,10 @@ class Text(unittest.TestCase):
     def test_an_unknown_extension_is_refused(self):
         """It used to write a GLB under any other name: washer.stl was a GLB."""
         root, _ = machine()
-        for name, said in (("washer.ply", ".ply"), ("washer.gltf", ".gltf"), ("washer.FBX", ".fbx"),
+        for name, said in (("washer.ply", ".ply"), ("washer.FBX", ".fbx"),
                            ("washer", "a path with no extension")):
             with self.assertRaisesRegex(ValueError, rf"^export: {re.escape(said)} is not a format sand3d writes: "
-                                                    rf"name the file \.glb, \.obj, \.stl, \.urdf or \.usda$"):
+                                                    rf"name the file \.glb, \.gltf, \.obj, \.stl, \.urdf or \.usda$"):
                 s3d.export(root, self.tmp / name)
         self.assertEqual(list(self.tmp.iterdir()), [])
         s3d.export(root, self.tmp / "washer.GLB")

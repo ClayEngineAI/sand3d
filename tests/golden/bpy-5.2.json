@@ -1,6 +1,7 @@
 {
  "bpy": "5.2.2 LTS",
  "digests": {
+  "case:animated_parts": "a29e673af4f473ff",
   "case:profile_shapes": "f7ec6b11db40c9d6",
   "case:stations": "5e4438297c70327f",
   "case:profile_outlines": "a6dbec8089b6284b",

@@ -60,8 +60,8 @@ def attach(handle, name, *children):
     return detail
 
 
-def export(root, path):
-    """root and what hangs on it by its joints, in metres: .glb at the current pose, joints
+def export(root, path, *, animations=None, fps=60):
+    """root and what hangs on it by its joints, in metres: .glb/.gltf at the current pose, joints
     in extras; .urdf a link per moving part, at rest, meshes beside it; .usda the URDF's
     tree as OpenUSD text, with the materials; .obj and .stl its meshes at the current pose.
 
@@ -72,18 +72,28 @@ def export(root, path):
     USD layer as text, the URDF's links, joints and names in UsdGeom and UsdPhysics, Z up,
     with the materials (`.usdc` is binary: convert the `.usda`) — or the meshes alone, as
     OBJ (Y up) or binary STL (Z up), at the current pose. Limits only: masses,
-    frictions, efforts and drives are dynamics, which sand3d does not say."""
+    frictions, efforts and drives are dynamics, which sand3d does not say.
+
+    `animations=[clip, ...]` writes named animations to .glb or .gltf, sampled at
+    `fps` (60 by default), with extra samples to preserve full revolutions. .gltf
+    writes a companion .bin; .glb is one file. Animated export leaves the scene's
+    pose unchanged. Other formats do not accept animations."""
     from . import meshfile, urdf, usd
     from .assembly import Handle
     root = root.root if isinstance(root, Handle) else root
     suffix = os.path.splitext(str(path))[1].lower()
+    if animations is not None:
+        from .animation_export import write
+        if suffix not in (".glb", ".gltf"):
+            raise ValueError("export: animations require .glb or .gltf")
+        return write(root, path, animations, fps)
     if suffix in (".usd", ".usdc", ".usdz"):
         tool = "usdzip" if suffix == ".usdz" else f"usdcat x.usda -o x{suffix}"
         raise ValueError(f"export: {suffix} is written by USD's own library, which sand3d does not take: write "
                          f".usda, USD as text, and convert it with USD's tools ({tool})")
-    if suffix not in (".glb", ".obj", ".stl", ".urdf", ".usda"):
+    if suffix not in (".glb", ".gltf", ".obj", ".stl", ".urdf", ".usda"):
         raise ValueError(f"export: {suffix or 'a path with no extension'} is not a format sand3d writes: "
-                         f"name the file .glb, .obj, .stl, .urdf or .usda")
+                         f"name the file .glb, .gltf, .obj, .stl, .urdf or .usda")
     if suffix in (".obj", ".stl"):
         (meshfile.write_obj if suffix == ".obj" else meshfile.write_stl)(root, path)
         return
@@ -95,6 +105,7 @@ def export(root, path):
         usd.write_usda(root, path)
         return
     lent = _lend_meshes()
+    gltf_format = "GLTF_SEPARATE" if suffix == ".gltf" else "GLB"
     try:
         if urdf.articulated(root):
             coll = bpy.data.collections.new("s3d~export")
@@ -107,7 +118,7 @@ def export(root, path):
             dressed = materials.dressed()           # asked before the tags come off: it reads them
             tags = {m: m.pop(materials.TAG) for m in bpy.data.materials if materials.TAG in m}   # extras: joints only
             try:
-                bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", collection=coll.name,
+                bpy.ops.export_scene.gltf(filepath=str(path), export_format=gltf_format, collection=coll.name,
                                           export_extras=True,
                                           export_materials="EXPORT" if dressed else "NONE")
             finally:
@@ -118,7 +129,7 @@ def export(root, path):
         scale = tuple(root.scale)
         root.scale = (_core.MM / 1000,) * 3
         try:
-            bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB",
+            bpy.ops.export_scene.gltf(filepath=str(path), export_format=gltf_format,
                                       export_materials="EXPORT" if materials.dressed() else "NONE")
         finally:
             root.scale = scale                 # the program's model stays in its unit

@@ -384,14 +384,14 @@ def articulated(root):
     return bool(Mechanism(root).bodies)
 
 
-def glb_tree(root, coll):
+def glb_tree(root, coll, kinematics=None, nodes=None):
     """Temporary objects in `coll` that the glTF exporter writes for `root`: its parts at
     their current pose, nested by the joints, a node per joint carrying it in its extras.
     The program's objects are renamed meanwhile, so the nodes keep their names; returns
     what `undo` needs."""
     mech = Mechanism(root)
     mech.check()
-    k = mech.k
+    k = kinematics if kinematics is not None else mech.k
     renamed = []
     for i, ob in enumerate(mech.members):
         renamed.append((ob, ob.name))
@@ -402,7 +402,9 @@ def glb_tree(root, coll):
         twin = bpy.data.objects.new(name, ob.data if ob.type == "MESH" else None)
         coll.objects.link(twin)
         made[ob.as_pointer()] = twin
-    world = {ob.as_pointer(): _core.world(ob) for ob, _ in renamed}
+        if nodes is not None:
+            nodes[(ob.as_pointer(), None)] = twin
+    world = {ob.as_pointer(): k.posed(ob) if kinematics is not None else _core.world(ob) for ob, _ in renamed}
 
     def hang(twin, parent_twin, parent_world, own_world):
         twin.parent = parent_twin
@@ -412,6 +414,8 @@ def glb_tree(root, coll):
     top = made[root.as_pointer()]
     top.matrix_basis = world[root.as_pointer()]
     top.scale = (_metres(),) * 3
+    if kinematics is not None:
+        top.matrix_basis = Matrix.Scale(_metres(), 4) @ world[root.as_pointer()]
     jointed = {c.as_pointer() for c in mech.bodies}
     for ob, _ in renamed:
         if ob is root:
@@ -424,10 +428,13 @@ def glb_tree(root, coll):
             for idx, (F, j) in enumerate(zip(frames, J.joints_of(ob))):
                 node = bpy.data.objects.new(mech.joint_names[(ob.as_pointer(), idx)], None)
                 coll.objects.link(node)
+                if nodes is not None:
+                    nodes[(ob.as_pointer(), idx)] = node
                 hang(node, above_twin, above_world, F)
                 span = _span(ob, idx, j)
                 f = _si(j["kind"])
-                extras = {"name": node.name, "type": _effective_type(ob, idx, j), "value": j.get("value", 0.0) * f}
+                value = k.data[ob.as_pointer()][idx].get("value", 0.0)
+                extras = {"name": node.name, "type": _effective_type(ob, idx, j), "value": value * f}
                 if j["axis"] is not None:                # the exporter turns every node frame Y-up: so is the axis
                     x, y, z = j["axis"]
                     extras["axis"] = [_clean(x), _clean(z), _clean(-y)]

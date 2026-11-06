@@ -106,6 +106,10 @@ LENGTHS = {
               "ratio": "-"},
     "pose": {"ob": "-", "value": "-", "joint": "-"},
     "seat": {"host": "-", "part": "-"},
+    "keyframes": {"ob": "-", "values": "-", "joint": "-", "x": "-", "y": "-", "z": "-",
+                  "rx": "-", "ry": "-", "rz": "-", "ease": "-"},
+    "clip": {"name": "-", "tracks": "-"},
+    "sample": {"animation": "-", "time": "-"},
     # assembly
     "material": {"ob": "-", "kind": "-", "color": "-", "roughness": "-", "metallic": "-", "opacity": "-",
                  "emission": "-"},
@@ -113,7 +117,7 @@ LENGTHS = {
     "assembly": {"name": "-", "children": "-", "anchors": "-"},
     "attach": {"handle": "-", "name": "-", "children": "-"},
     "Handle": {"root": "-", "anchors": "-"},
-    "export": {"root": "-", "path": "-"},
+    "export": {"root": "-", "path": "-", "animations": "-", "fps": "-"},
     "empty_scene": {},
     "fingerprint": {},
     "units": {"name": "-"},
@@ -184,7 +188,18 @@ def _pose(arguments, k):
 
 
 #: Verbs whose lengths depend on their other arguments.
-FIXES = {"joint": _joint, "pose": _pose}
+def _keyframes(arguments, k):
+    from sand3d.joints import joints_of, target
+    for name in ("x", "y", "z"):
+        if arguments.get(name) is not None:
+            arguments[name] = {t: value * k for t, value in arguments[name].items()}
+    if arguments.get("values") is not None:
+        child, index = target(arguments["ob"], arguments.get("joint"))
+        if joints_of(child)[index]["kind"] == "prismatic":
+            arguments["values"] = {t: value * k for t, value in arguments["values"].items()}
+
+
+FIXES = {"joint": _joint, "pose": _pose, "keyframes": _keyframes}
 
 
 def _wrap(fn, spec, k, out=None, fix=None):

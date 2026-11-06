@@ -14,6 +14,19 @@ import sand3d as s3d
 from harness import case
 
 
+@case("keyframes", "clip", "sample")
+def animated_parts():
+    base = s3d.box("base", 40, 40, 10)
+    leaf = s3d.at(s3d.box("leaf", 20, 4, 20), z=10)
+    s3d.joint("hinge", leaf, s3d.local(base), axis="+Z", range=(0, 90))
+    root = s3d.assembly("animated", base, leaf)
+    motion = s3d.clip("open", s3d.keyframes(leaf, {0: 0, 1: 90}, ease="in_out_cubic"),
+                      s3d.keyframes(root, z={0: 0, 1: 20}, ease=lambda t: t * t))
+    s3d.sample(motion, 0.75)
+    s3d.sample(motion, 0.5)
+    return motion.duration
+
+
 @case("rect", "circle", "ellipse", "slot", "polygon", "superellipse")
 def profile_shapes():
     return [p.mesh() for p in (s3d.rect(40, 20, r=4), s3d.rect(40, 20, chamfer=3), s3d.circle(20),
