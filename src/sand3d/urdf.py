@@ -402,6 +402,8 @@ def glb_tree(root, coll, kinematics=None, nodes=None):
         twin = bpy.data.objects.new(name, ob.data if ob.type == "MESH" else None)
         coll.objects.link(twin)
         made[ob.as_pointer()] = twin
+        if ob.type == "MESH" and "clayMaterial" in ob:
+            twin["clayMaterial"] = ob["clayMaterial"].to_dict()
         if nodes is not None:
             nodes[(ob.as_pointer(), None)] = twin
     world = {ob.as_pointer(): k.posed(ob) if kinematics is not None else _core.world(ob) for ob, _ in renamed}

@@ -116,10 +116,10 @@ def export(root, path, *, animations=None, fps=60):
                 bpy.data.collections.remove(coll)
                 raise
             dressed = materials.dressed()           # asked before the tags come off: it reads them
-            tags = {m: m.pop(materials.TAG) for m in bpy.data.materials if materials.TAG in m}   # extras: joints only
+            tags = {m: m.pop(materials.TAG) for m in bpy.data.materials if materials.TAG in m}   # internal material tags are not exported
             try:
                 bpy.ops.export_scene.gltf(filepath=str(path), export_format=gltf_format, collection=coll.name,
-                                          export_extras=True,
+                                          export_extras=True, export_tangents=False,
                                           export_materials="EXPORT" if dressed else "NONE")
             finally:
                 for m, tag in tags.items():
@@ -130,6 +130,7 @@ def export(root, path, *, animations=None, fps=60):
         root.scale = (_core.MM / 1000,) * 3
         try:
             bpy.ops.export_scene.gltf(filepath=str(path), export_format=gltf_format,
+                                      export_extras=True, export_tangents=False,
                                       export_materials="EXPORT" if materials.dressed() else "NONE")
         finally:
             root.scale = scale                 # the program's model stays in its unit
@@ -157,16 +158,50 @@ def _lend_meshes():
             bm.free()
             mesh.name = "s3d~lent"
             own.name = name
+            _box_uvs(own)
             copies[mesh] = (own, name)
-        objects.append((ob, mesh))
+        previous = ob.get("clayMaterial")
+        previous = previous.to_dict() if hasattr(previous, "to_dict") else previous
+        objects.append((ob, mesh, previous))
         ob.data = copies[mesh][0]
+        tag = materials._nearest(ob)
+        if tag is not None:
+            ob["clayMaterial"] = materials.clay_tag(tag)
     return objects, copies
+
+
+def _box_uvs(mesh):
+    """Sign-aware Blender cube projection, local metres; side V follows +Z.
+
+    Ties use Blender's Z, Y, X priority. Negated V compensates glTF's 1-v for
+    Clay's flipY=True preset textures. These are temporary export meshes only.
+    """
+    for layer in list(mesh.uv_layers):
+        mesh.uv_layers.remove(layer)
+    uv = mesh.uv_layers.new(name="ClayUV")
+    unit = _core.MM / 1000
+    for face in mesh.polygons:
+        nx, ny, nz = face.normal
+        ax, ay, az = abs(nx), abs(ny), abs(nz)
+        for corner in face.loop_indices:
+            x, y, z = mesh.vertices[mesh.loops[corner].vertex_index].co
+            if az >= ax and az >= ay:
+                u, v = x, y if nz >= 0 else -y
+            elif ay >= ax and ay >= az:
+                u, v = -x if ny >= 0 else x, z
+            else:
+                u, v = y if nx >= 0 else -y, z
+            uv.data[corner].uv = (u * unit, -v * unit)
 
 
 def _return_meshes(lent):
     objects, copies = lent
-    for ob, mesh in objects:
+    for ob, mesh, previous in objects:
         ob.data = mesh
+        if previous is None:
+            ob.pop("clayMaterial", None)
+        else:
+            ob["clayMaterial"] = previous
     for mesh, (own, name) in copies.items():
         bpy.data.meshes.remove(own)
         mesh.name = name

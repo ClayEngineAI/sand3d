@@ -6,6 +6,19 @@
   &nbsp;sand3d
 </h1>
 
+## Clay fork
+
+This is [ClayEngineAI/sand3d](https://github.com/ClayEngineAI/sand3d), an Apache-2.0
+fork of Sandflow's sand3d. Modified files replace the upstream material vocabulary
+with Clay's 25 starter presets, add `repeat` in tiles per metre, and generate local
+box UVs and `extras.clayMaterial` tags on GLB/glTF export. Textures stay in Clay;
+other viewers use flat fallback colors derived from the presets. The fork also
+adds keyframed animation, easing and animated glTF export. Upstream PyPI and site
+publishing are disabled. The Python import remains `sand3d`.
+
+In Clay, import `applyMaterials` and only the presets the model uses, then call
+`applyMaterials(model.scene, { wood, metal })` before adding it to the scene.
+
 **3D modeling in Python, built for LLMs.**
 
 sand3d is a Python library for writing 3D objects as short programs: profiles, solids,

@@ -286,7 +286,7 @@ class Glb(unittest.TestCase):
         lift = nodes[by_name["cap_lift"]]["extras"]["s3d_joint"]
         self.assertEqual(lift["mimic"]["joint"], "cap_turn")
         for n in nodes:
-            self.assertEqual(set(n.get("extras", {})) - {"s3d_joint"}, set(), n["name"])
+            self.assertEqual(set(n.get("extras", {})) - {"s3d_joint", "clayMaterial"}, set(), n["name"])
         for m in gltf.get("materials", []):
             self.assertNotIn("extras", m)
         for m in bpy.data.materials:                     # the scene keeps its tags
@@ -365,7 +365,7 @@ class Glb(unittest.TestCase):
         s3d.export(root, self.path)
         nodes = glb_json(self.path)["nodes"]
         self.assertEqual(sorted(n["name"] for n in nodes), ["b", "thing"])
-        self.assertTrue(all("extras" not in n for n in nodes))
+        self.assertTrue(all("s3d_joint" not in n.get("extras", {}) for n in nodes))
 
 
 if __name__ == "__main__":

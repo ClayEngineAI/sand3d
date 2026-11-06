@@ -16,6 +16,7 @@ sets none never runs it, and builds and exports exactly as before.
 """
 import difflib
 import json
+import math
 
 import bpy
 
@@ -24,48 +25,50 @@ from . import _core
 #: Custom property holding an object's tag, and a material's look.
 TAG = "s3d_material"
 
-#: The presets: sRGB colour, roughness, and what else sets the look apart.
+#: Clay starter presets. Flat colours are the mean linear base-colour image times
+#: its linear tint, encoded as sRGB. Roughness is the mean green channel.
+#: Derived from ClayEngineAI/clayengine c6f702b4f5 starter textures; no images are embedded.
 PRESETS = {
-    # woods
-    "oak":            dict(color="#b48a5a", roughness=0.55),
-    "walnut":         dict(color="#5e3b25", roughness=0.45),
-    "pine":           dict(color="#d9b27c", roughness=0.6),
-    "birch":          dict(color="#e2c9a0", roughness=0.55),
-    # metals
-    "steel":          dict(color="#a8abb0", roughness=0.3, metallic=1.0),
-    "brushed_steel":  dict(color="#b4b7bb", roughness=0.35, metallic=1.0),
-    "chrome":         dict(color="#e6e8ea", roughness=0.05, metallic=1.0),
-    "aluminium":      dict(color="#c9ccd0", roughness=0.4, metallic=1.0),
-    "brass":          dict(color="#c9a24a", roughness=0.25, metallic=1.0),
-    "copper":         dict(color="#c47a52", roughness=0.25, metallic=1.0),
-    "painted_metal":  dict(color="#2b2d30", roughness=0.4, coat=0.3),
-    # plastics, rubber, glass, ceramic
-    "plastic":        dict(color="#d8d8d8", roughness=0.5),
-    "glossy_plastic": dict(color="#d8d8d8", roughness=0.12, coat=0.5),
-    "rubber":         dict(color="#202020", roughness=0.9),
-    "glass":          dict(color="#ffffff", roughness=0.0, transmission=1.0),
-    "ceramic":        dict(color="#f2f0ea", roughness=0.15, coat=0.6),
-    # soft goods, stone
-    "fabric":         dict(color="#8a8f96", roughness=0.85, sheen=0.6),
-    "velvet":         dict(color="#2f4f5f", roughness=0.9, sheen=1.0),
-    "leather":        dict(color="#6b3e26", roughness=0.5),
-    "marble":         dict(color="#e8e6e1", roughness=0.15, coat=0.4),
-    "concrete":       dict(color="#9a9893", roughness=0.85),
-    # a surface that gives light, in its own colour
-    "light":          dict(color="#fff1dc", roughness=0.5, emission=12.0),
+    'brick': {'color': '#9a4932', 'roughness': 0.5919535, 'tint': '#ad5941', 'mean': (0.77396067, 0.67031806, 0.60408652)},
+    'ceramic': {'color': '#e9e7e0', 'roughness': 0.2879309, 'tint': '#f9f7f0', 'mean': (0.85952095, 0.85948095, 0.85952988)},
+    'cobbles': {'color': '#8a857c', 'roughness': 0.86520384, 'tint': '#a39c92', 'mean': (0.69700559, 0.70007523, 0.7017679)},
+    'concrete': {'color': '#9e9c96', 'roughness': 0.71054219, 'tint': '#b4b2ab', 'mean': (0.74694049, 0.74703363, 0.7456364)},
+    'fabric': {'color': '#897c6c', 'roughness': 0.88659644, 'tint': '#a1927f', 'mean': (0.70712543, 0.70712543, 0.70712543)},
+    'glass': {'color': '#ffffff', 'roughness': 0.05, 'transmission': 1.0, 'ior': 1.5, 'thickness': 0.1},
+    'granite': {'color': '#8c8884', 'roughness': 0.15949004, 'tint': '#acabab', 'mean': (0.63490552, 0.60405333, 0.56429499)},
+    'grass': {'color': '#4f7d32', 'roughness': 0.90322895, 'tint': '#6aa848', 'mean': (0.54455225, 0.5235333, 0.49094803)},
+    'gravel': {'color': '#8a8378', 'roughness': 0.83456566, 'tint': '#aea69a', 'mean': (0.59782038, 0.59488523, 0.57962152)},
+    'ice': {'color': '#b8dcef', 'roughness': 0.39332123, 'tint': '#c8ebfd', 'mean': (0.82836466, 0.85843566, 0.88219017)},
+    'marble': {'color': '#b5b7c1', 'roughness': 0.43305796, 'tint': '#ffffff', 'mean': (0.46071108, 0.4755572, 0.5362856)},
+    'metal': {'color': '#a8adb3', 'roughness': 0.17721718, 'tint': '#bdc3c9', 'mean': (0.7681427, 0.7681427, 0.7681427), 'metallic': 1.0},
+    'mud': {'color': '#4a3a2a', 'roughness': 0.53579429, 'tint': '#65503b', 'mean': (0.52983494, 0.52425485, 0.52620791)},
+    'pavers': {'color': '#a19584', 'roughness': 0.75917889, 'tint': '#bdaf9c', 'mean': (0.69617215, 0.69735645, 0.69866195)},
+    'planks': {'color': '#9b7149', 'roughness': 0.65444815, 'tint': '#b6875a', 'mean': (0.7025811, 0.68162213, 0.64691189)},
+    'plastic': {'color': '#a3a2a5', 'roughness': 0.4},
+    'rock': {'color': '#76726c', 'roughness': 0.69511942, 'tint': '#918c86', 'mean': (0.64393567, 0.64242022, 0.63172003)},
+    'rust': {'color': '#cdafa1', 'roughness': 0.60035967, 'tint': '#ffffff', 'mean': (0.6081077, 0.42886648, 0.35617403), 'metallic': 1.0},
+    'sand': {'color': '#cdb586', 'roughness': 0.75636274, 'tint': '#dac696', 'mean': (0.87218789, 0.81483556, 0.78049079)},
+    'sandstone': {'color': '#715241', 'roughness': 0.7797827, 'tint': '#ffffff', 'mean': (0.16424743, 0.08461205, 0.05333959)},
+    'shingles': {'color': '#5a5550', 'roughness': 0.77772072, 'tint': '#78716f', 'mean': (0.54438165, 0.54510224, 0.50426526)},
+    'snow': {'color': '#eff0f0', 'roughness': 0.4900932, 'tint': '#ffffff', 'mean': (0.86428835, 0.87207652, 0.87444021)},
+    'soil': {'color': '#6e5640', 'roughness': 0.90590431, 'tint': '#ad896b', 'mean': (0.37484442, 0.37213305, 0.34809781)},
+    'tarmac': {'color': '#3c3c3e', 'roughness': 0.86557038, 'tint': '#454547', 'mean': (0.75400036, 0.76152059, 0.77520232)},
+    'wood': {'color': '#9f703f', 'roughness': 0.6293181, 'tint': '#be8d51', 'mean': (0.67653082, 0.60850232, 0.60064688)},
 }
 
 
-def material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, emission=None):
-    """Kind: oak walnut pine birch steel brushed_steel chrome aluminium brass copper
-    painted_metal plastic glossy_plastic rubber glass ceramic fabric velvet leather marble
-    concrete light; color "#rrggbb".
+def material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, emission=None, repeat=None):
+    """Kind: brick ceramic cobbles concrete fabric glass granite grass gravel ice marble
+    metal mud pavers planks plastic rock rust sand sandstone shingles snow soil tarmac wood;
+    color "#rrggbb".
 
     `ob` — a part, a group, an assembly or a list — made of `kind`, one of the presets,
     its colour (sRGB: "#rrggbb" or (r, g, b) in 0..1), roughness, metallic, opacity (1
     opaque, 0 invisible) or emission (the light it gives, in its own colour) changed where
     given. On a group or an assembly, every part under it that names none of its own: the
-    nearest call wins, in whatever order the calls come. Returns `ob`."""
+    nearest call wins, in whatever order the calls come. `repeat` is a positive number
+    or (x, y), texture tiles per metre, default (1, 1). GLB/glTF writes the Clay preset
+    tag and local box UVs; other viewers use the flat fallback. Returns `ob`."""
     from .assembly import Handle
     from .edit import _flat
     if kind not in PRESETS:
@@ -77,11 +80,19 @@ def material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, 
     for name, value, top in (("roughness", roughness, 1), ("metallic", metallic, 1), ("opacity", opacity, 1),
                              ("emission", emission, None)):
         if value is not None:
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 or (top and value > top):
+            if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+                    or value < 0 or (top and value > top)):
                 raise ValueError(f"material: {name}={value!r} is not a number "
                                  + ("between 0 and 1" if top else "of 0 or more")
                                  + (" — 1 is opaque, 0 invisible" if name == "opacity" else ""))
         given[name] = None if value is None else float(value)
+    if repeat is not None:
+        tiles = (repeat, repeat) if isinstance(repeat, (int, float)) else repeat
+        if (not isinstance(tiles, (tuple, list)) or len(tiles) != 2
+                or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                       or not math.isfinite(v) or v <= 0 for v in tiles)):
+            raise ValueError("material: repeat is a positive finite number or (x, y), tiles per metre")
+        given["repeat"] = [float(v) for v in tiles]
     tag = json.dumps({"kind": kind, **{k: v for k, v in given.items() if v is not None}}, sort_keys=True)
     targets = [t.root if isinstance(t, Handle) else t for t in _flat([ob])]
     for target in targets:                  # all checked before any is tagged
@@ -115,9 +126,15 @@ def _linear(hex_color):
 def look(tag):
     """The values a tag stands for: its preset, changed where the call said."""
     spec = json.loads(tag)
-    values = dict(metallic=0.0, opacity=1.0, transmission=0.0, coat=0.0, sheen=0.0, emission=0.0)
-    values.update(PRESETS[spec.pop("kind")])
+    values = dict(metallic=0.0, opacity=1.0, transmission=0.0, coat=0.0, sheen=0.0, emission=0.0, ior=1.5)
+    preset = PRESETS[spec.pop("kind")]
+    values.update(preset)
     values.update(spec)
+    values["emissive"] = spec.get("color", preset.get("tint", preset["color"]))
+    if "color" in spec and "mean" in preset:
+        linear = [c * mean for c, mean in zip(_linear(spec["color"]), preset["mean"])]
+        values["color"] = _hex(tuple(12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+                                     for c in linear))
     return values
 
 
@@ -125,7 +142,8 @@ def _name(tag):
     """A material's name: its preset, and what the program changed in it."""
     spec = json.loads(tag)
     kind = spec.pop("kind")
-    return " ".join([kind, *(v if k == "color" else f"{k}={v:g}" for k, v in sorted(spec.items()))])
+    return " ".join([kind, *(v if k == "color" else f"repeat={v[0]:g},{v[1]:g}" if k == "repeat"
+                            else f"{k}={v:g}" for k, v in sorted(spec.items()))])
 
 
 def _material(tag, made):
@@ -141,7 +159,8 @@ def _material(tag, made):
     for socket, value in (("Base Color", rgba), ("Roughness", v["roughness"]), ("Metallic", v["metallic"]),
                           ("Alpha", v["opacity"]), ("Transmission Weight", v["transmission"]),
                           ("Coat Weight", v["coat"]), ("Sheen Weight", v["sheen"]),
-                          ("Emission Color", rgba), ("Emission Strength", v["emission"])):
+                          ("IOR", v["ior"]), ("Emission Color", _linear(v["emissive"])),
+                          ("Emission Strength", v["emission"])):
         bsdf.inputs[socket].default_value = value
     if v["coat"]:
         bsdf.inputs["Coat Roughness"].default_value = 0.05
@@ -159,6 +178,30 @@ def _nearest(ob):
             return ob[TAG]
         ob = ob.parent
     return None
+
+
+def clay_tag(tag):
+    """The public node-extras contract; defaults stay with the Clay preset."""
+    spec = json.loads(tag)
+    kind = spec["kind"]
+    parameters = {}
+    for name in ("color", "roughness", "metallic", "opacity", "emission"):
+        if name not in spec:
+            continue
+        value = spec[name]
+        if name == "color":
+            parameters["color"] = int(value[1:], 16)
+        elif name == "metallic":
+            parameters["metalness"] = value
+        elif name == "emission":
+            preset = PRESETS[kind]
+            color = spec.get("color", preset.get("tint", preset["color"]))
+            parameters.update(emissive=int(color[1:], 16), emissiveIntensity=value)
+        else:
+            parameters[name] = value
+            if name == "opacity" and value < 1:
+                parameters["transparent"] = True
+    return {"preset": kind, "parameters": parameters, "repeat": spec.get("repeat", [1.0, 1.0])}
 
 
 def resolve():

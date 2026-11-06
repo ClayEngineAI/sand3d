@@ -264,7 +264,7 @@ def write(root, path, animations, fps):
         with tempfile.TemporaryDirectory() as directory:
             temporary = os.path.join(directory, "asset.glb")
             bpy.ops.export_scene.gltf(filepath=temporary, export_format="GLB", collection=coll.name,
-                                      export_extras=True, export_animations=False,
+                                      export_extras=True, export_animations=False, export_tangents=False,
                                       export_materials="EXPORT" if dressed else "NONE")
             doc, binary = _read_glb(temporary)
         exported = {}

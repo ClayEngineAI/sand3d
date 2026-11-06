@@ -193,7 +193,8 @@ class Usd(unittest.TestCase):
         linear = [(c / 255 / 12.92 if c / 255 <= 0.04045 else ((c / 255 + 0.055) / 1.055) ** 2.4)
                   for c in (0x33, 0x66, 0x99)]
         self.assertTrue(close([plastic["diffuseColor"]], [linear], 1e-7))
-        self.assertEqual((plastic["opacity"], plastic["roughness"]), (0.5, 0.5))
+        self.assertEqual(plastic["opacity"], 0.5)
+        self.assertAlmostEqual(plastic["roughness"], 0.4, places=6)
 
     def test_the_usd_posed_by_its_own_joints_is_where_pose_puts_the_parts(self):
         p = self.parts

@@ -20,13 +20,13 @@ def washer(w=600, d=600, h=850, porthole=440, door_d=480, drum_d=420):
     drum = s3d.at(s3d.cylinder("drum", drum_d, d - 220), on=back)
     s3d.cut(drum, s3d.at(s3d.cylinder("bore", drum_d - 20, d - 229), on=back.offset(10)))
     s3d.join(drum, s3d.at(s3d.cylinder("axle", 40, 60), on=back.offset(-60)))
-    s3d.material(drum, "brushed_steel")
+    s3d.material(drum, 'metal', color='#b4b7bb', roughness=0.35)
 
     ring = s3d.at(s3d.tube("ring", door_d, 300, 45), on=front.move(0, 400))  # centred on the porthole
     glass = s3d.at(s3d.cylinder("glass", 320, 16), on=front.move(0, 400).offset(14))
     hinge = front.move(-door_d / 2, 400).offset(45)                    # the ring's outer -Y edge: it clears the cabinet
     s3d.seat(ring, glass)
-    s3d.material(ring, "painted_metal", color="#3a3d42")
+    s3d.material(ring, 'metal', color="#3a3d42", metallic=0)
     s3d.material(glass, "glass", color="#cfe3e6", opacity=0.4)
     handle = s3d.at(s3d.box("handle", 24, 110, 30), on=s3d.bbox(ring, "+X").move(x=door_d / 2 - 40))
     door = s3d.group("door", ring, glass, handle)                      # the handle and the glass move with it

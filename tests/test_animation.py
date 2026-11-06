@@ -228,7 +228,7 @@ class AnimationExport(unittest.TestCase):
 
     def test_gltf_and_glb_contain_playable_named_clips_and_preserve_scene(self):
         asset, door, drawer, wheel, screw = model()
-        s3d.material(door, "painted_metal", color="#d95530")
+        s3d.material(door, 'metal', color="#d95530", metallic=0)
         opening = s3d.clip("open", s3d.keyframes(door, {0: 0, 1: 90}, ease="in_out_sine"),
                            s3d.keyframes(drawer, {0: 0, 0.5: 0, 1: 80}),
                            s3d.keyframes(screw, {0: 0, 1: 720}, joint="turn"))

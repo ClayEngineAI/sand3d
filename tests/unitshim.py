@@ -112,7 +112,7 @@ LENGTHS = {
     "sample": {"animation": "-", "time": "-"},
     # assembly
     "material": {"ob": "-", "kind": "-", "color": "-", "roughness": "-", "metallic": "-", "opacity": "-",
-                 "emission": "-"},
+                 "emission": "-", "repeat": "-"},
     "group": {"name": "-", "children": "-"},
     "assembly": {"name": "-", "children": "-", "anchors": "-"},
     "attach": {"handle": "-", "name": "-", "children": "-"},

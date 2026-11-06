@@ -101,7 +101,7 @@ gear(name, teeth, module, width, bore=0, angle=20)  # Involute spur gear
 knurl(name, d, h, pitch=None, straight=False)  # Knurled grip; pitch 1 mm by default
 thread(name, d, length, pitch, left=False)  # Threaded rod
 # materials
-material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, emission=None)  # Kind: oak walnut pine birch steel brushed_steel chrome aluminium brass copper painted_metal plastic glossy_plastic rubber glass ceramic fabric velvet leather marble concrete light; color "#rrggbb"
+material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, emission=None, repeat=None)  # Kind: brick ceramic cobbles concrete fabric glass granite grass gravel ice marble metal mud pavers planks plastic rock rust sand sandstone shingles snow soil tarmac wood; color "#rrggbb"; repeat: tiles/metre, a number or (x,y), default (1,1)
 # articulation
 joint(name, child, on, kind='revolute', axis='normal', range=None, follows=None, ratio=1)  # How child moves on the part on was read on: revolute (range in degrees), continuous (no range), prismatic (range in the unit), free (no axis, no range); follows: a child or a joint name, and this joint's value is ratio × its (degrees per unit, or units per degree), no range; returns child
 pose(ob, value, joint=None)  # Move the mechanism: that joint to value (degrees or the unit), an error outside its range; what it carries follows; joint= when child has two
