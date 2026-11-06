@@ -24,6 +24,12 @@ change the source model's pose.
 The [complete runnable example](examples/animation.py) exports four clips: `open`,
 `spin`, `bounce`, and `custom`.
 
+The [washing-machine example](examples/washing_machine_animation.py) exports an
+eight-second `washer_cycle`: the door and drawer open and close, then the drum
+and dial turn. It exports both GLB and separate glTF. In Clay, load the asset,
+clone its scene, and play its clip through `AnimationMixer`; Clay advances the
+mixer automatically. Joint metadata alone does not create playback.
+
 ## Joints and transforms
 
 Joint tracks follow `pose`'s addressing rules. Use the part directly when it has
