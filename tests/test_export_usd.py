@@ -193,7 +193,8 @@ class Usd(unittest.TestCase):
         linear = [(c / 255 / 12.92 if c / 255 <= 0.04045 else ((c / 255 + 0.055) / 1.055) ** 2.4)
                   for c in (0x33, 0x66, 0x99)]
         self.assertTrue(close([plastic["diffuseColor"]], [linear], 1e-7))
-        self.assertEqual((plastic["opacity"], plastic["roughness"]), (0.5, 0.5))
+        self.assertEqual(plastic["opacity"], 0.5)
+        self.assertAlmostEqual(plastic["roughness"], 0.4, places=6)
 
     def test_the_usd_posed_by_its_own_joints_is_where_pose_puts_the_parts(self):
         p = self.parts
@@ -264,10 +265,10 @@ class Text(unittest.TestCase):
     def test_an_unknown_extension_is_refused(self):
         """It used to write a GLB under any other name: washer.stl was a GLB."""
         root, _ = machine()
-        for name, said in (("washer.ply", ".ply"), ("washer.gltf", ".gltf"), ("washer.FBX", ".fbx"),
+        for name, said in (("washer.ply", ".ply"), ("washer.FBX", ".fbx"),
                            ("washer", "a path with no extension")):
             with self.assertRaisesRegex(ValueError, rf"^export: {re.escape(said)} is not a format sand3d writes: "
-                                                    rf"name the file \.glb, \.obj, \.stl, \.urdf or \.usda$"):
+                                                    rf"name the file \.glb, \.gltf, \.obj, \.stl, \.urdf or \.usda$"):
                 s3d.export(root, self.tmp / name)
         self.assertEqual(list(self.tmp.iterdir()), [])
         s3d.export(root, self.tmp / "washer.GLB")

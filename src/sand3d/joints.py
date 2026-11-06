@@ -526,14 +526,20 @@ class Kinematics:
     any object, computed from what the objects hold — not from the order they were
     posed in."""
 
-    def __init__(self):
+    def __init__(self, values=None, bases=None):
         self.data = {ob.as_pointer(): joints_of(ob) for ob in everything()}
+        for (key, index), value in (values or {}).items():
+            self.data[key][index]["value"] = value
+        self.bases = bases or {}
         self._rest, self._posed = {}, {}
 
     def rest_world(self, ob):
         key = ob.as_pointer()
         if key not in self._rest:
-            local = ob.matrix_parent_inverse @ (rest_basis(ob) if key in self.data else ob.matrix_basis)
+            basis = self.bases.get(key)
+            if basis is None:
+                basis = rest_basis(ob) if key in self.data else ob.matrix_basis
+            local = ob.matrix_parent_inverse @ basis
             self._rest[key] = _core.snapped(self.rest_world(ob.parent) @ local) if ob.parent else Matrix(local)
         return self._rest[key]
 

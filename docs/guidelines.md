@@ -33,13 +33,13 @@ def round_base(d=202, h=30, edge_r=6, collar_d=68, collar_h=9):
     base = s3d.fillet(base, r=edge_r)  # ← accidental relation: the taper has nothing to do with the fillet
     collar = s3d.at(s3d.cone("collar", d=collar_d, d2=collar_d-edge_r*2, h=collar_h), z=h-1)
     base = s3d.join(base, collar)
-    s3d.material(base, "painted_metal", color="#606060")
+    s3d.material(base, "metal", metallic=0, color="#606060")
     return s3d.group("round_base", base)
 
 
 def slender_stem(d=29, h=1419, shade_z=1300):
     stem = s3d.cylinder("stem", d=d, h=h)
-    s3d.material(stem, "painted_metal", color="#595959")
+    s3d.material(stem, "metal", metallic=0, color="#595959")
     shade = s3d.at(open_shade(), z=shade_z)
     return s3d.group("slender_stem", stem, shade)
 
@@ -143,14 +143,14 @@ def end_crossrail(width=325, d=31, height=182, stem_d=29):
     solid = s3d.wire('crossrail', path=[(-width/2+d/2,0,height-d/2),(width/2-d/2,0,height-d/2)], d=d)
     stem = s3d.cylinder('upright', d=stem_d, h=height-d/2)
     s3d.join(solid, stem)
-    s3d.material(solid, 'painted_metal', color='#4c71ae')
+    s3d.material(solid, 'metal', metallic=0, color='#4c71ae')
     return s3d.group('end_crossrail', solid)
 ...
 def opposite_crossrail(width=325, d=31, height=182, stem_d=29):  # ← the same six lines as end_crossrail
     solid = s3d.wire('crossrail', path=[(-width/2+d/2,0,height-d/2),(width/2-d/2,0,height-d/2)], d=d)
     stem = s3d.cylinder('upright', d=stem_d, h=height-d/2)
     s3d.join(solid, stem)
-    s3d.material(solid, 'painted_metal', color='#4c71ae')
+    s3d.material(solid, 'metal', metallic=0, color='#4c71ae')
     return s3d.group('opposite_crossrail', solid)
 ```
 
@@ -166,7 +166,7 @@ def end_crossrail(width=325, d=31, height=182, stem_d=29):
     solid = s3d.wire('crossrail', path=[(-width/2+d/2,0,height-d/2),(width/2-d/2,0,height-d/2)], d=d)
     stem = s3d.cylinder('upright', d=stem_d, h=height-d/2)
     s3d.join(solid, stem)
-    s3d.material(solid, 'painted_metal', color='#4c71ae')
+    s3d.material(solid, 'metal', metallic=0, color='#4c71ae')
     return s3d.group('end_crossrail', solid)
 ```
 
@@ -188,7 +188,7 @@ value that follows from another is written as an expression of it.
 ```python
     profile = s3d.poly([(d/2,0), (d/2,shoulder), (mouth_d/2,h), (mouth_d/2-wall,h), (d/2-wall,shoulder), (d/2-wall,0)])
     neck = s3d.revolve("neck", profile)
-    s3d.material(neck, kind="steel", color="#888888")
+    s3d.material(neck, kind="metal", roughness=0.3, color="#888888")
 ```
 
 **Wrong**: a freezer cabinet.
@@ -379,7 +379,7 @@ once, before it is repeated. On shape-only data, such as CAD pieces, it is optio
 
 ```python
     plank = s3d.box("top_plank", w=w, d=plank_d, h=h)
-    s3d.material(plank, "oak", color="#5d4533")
+    s3d.material(plank, "wood", color="#5d4533")
     planks = s3d.at(plank, on=s3d.grid(nx=1, ny=5, py=pitch))
 ```
 

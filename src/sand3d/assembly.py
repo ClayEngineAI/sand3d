@@ -60,8 +60,8 @@ def attach(handle, name, *children):
     return detail
 
 
-def export(root, path):
-    """root and what hangs on it by its joints, in metres: .glb at the current pose, joints
+def export(root, path, *, animations=None, fps=60):
+    """root and what hangs on it by its joints, in metres: .glb/.gltf at the current pose, joints
     in extras; .urdf a link per moving part, at rest, meshes beside it; .usda the URDF's
     tree as OpenUSD text, with the materials; .obj and .stl its meshes at the current pose.
 
@@ -72,18 +72,28 @@ def export(root, path):
     USD layer as text, the URDF's links, joints and names in UsdGeom and UsdPhysics, Z up,
     with the materials (`.usdc` is binary: convert the `.usda`) — or the meshes alone, as
     OBJ (Y up) or binary STL (Z up), at the current pose. Limits only: masses,
-    frictions, efforts and drives are dynamics, which sand3d does not say."""
+    frictions, efforts and drives are dynamics, which sand3d does not say.
+
+    `animations=[clip, ...]` writes named animations to .glb or .gltf, sampled at
+    `fps` (60 by default), with extra samples to preserve full revolutions. .gltf
+    writes a companion .bin; .glb is one file. Animated export leaves the scene's
+    pose unchanged. Other formats do not accept animations."""
     from . import meshfile, urdf, usd
     from .assembly import Handle
     root = root.root if isinstance(root, Handle) else root
     suffix = os.path.splitext(str(path))[1].lower()
+    if animations is not None:
+        from .animation_export import write
+        if suffix not in (".glb", ".gltf"):
+            raise ValueError("export: animations require .glb or .gltf")
+        return write(root, path, animations, fps)
     if suffix in (".usd", ".usdc", ".usdz"):
         tool = "usdzip" if suffix == ".usdz" else f"usdcat x.usda -o x{suffix}"
         raise ValueError(f"export: {suffix} is written by USD's own library, which sand3d does not take: write "
                          f".usda, USD as text, and convert it with USD's tools ({tool})")
-    if suffix not in (".glb", ".obj", ".stl", ".urdf", ".usda"):
+    if suffix not in (".glb", ".gltf", ".obj", ".stl", ".urdf", ".usda"):
         raise ValueError(f"export: {suffix or 'a path with no extension'} is not a format sand3d writes: "
-                         f"name the file .glb, .obj, .stl, .urdf or .usda")
+                         f"name the file .glb, .gltf, .obj, .stl, .urdf or .usda")
     if suffix in (".obj", ".stl"):
         (meshfile.write_obj if suffix == ".obj" else meshfile.write_stl)(root, path)
         return
@@ -95,6 +105,7 @@ def export(root, path):
         usd.write_usda(root, path)
         return
     lent = _lend_meshes()
+    gltf_format = "GLTF_SEPARATE" if suffix == ".gltf" else "GLB"
     try:
         if urdf.articulated(root):
             coll = bpy.data.collections.new("s3d~export")
@@ -105,10 +116,10 @@ def export(root, path):
                 bpy.data.collections.remove(coll)
                 raise
             dressed = materials.dressed()           # asked before the tags come off: it reads them
-            tags = {m: m.pop(materials.TAG) for m in bpy.data.materials if materials.TAG in m}   # extras: joints only
+            tags = {m: m.pop(materials.TAG) for m in bpy.data.materials if materials.TAG in m}   # internal material tags are not exported
             try:
-                bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", collection=coll.name,
-                                          export_extras=True,
+                bpy.ops.export_scene.gltf(filepath=str(path), export_format=gltf_format, collection=coll.name,
+                                          export_extras=True, export_tangents=False,
                                           export_materials="EXPORT" if dressed else "NONE")
             finally:
                 for m, tag in tags.items():
@@ -118,7 +129,8 @@ def export(root, path):
         scale = tuple(root.scale)
         root.scale = (_core.MM / 1000,) * 3
         try:
-            bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB",
+            bpy.ops.export_scene.gltf(filepath=str(path), export_format=gltf_format,
+                                      export_extras=True, export_tangents=False,
                                       export_materials="EXPORT" if materials.dressed() else "NONE")
         finally:
             root.scale = scale                 # the program's model stays in its unit
@@ -146,16 +158,50 @@ def _lend_meshes():
             bm.free()
             mesh.name = "s3d~lent"
             own.name = name
+            _box_uvs(own)
             copies[mesh] = (own, name)
-        objects.append((ob, mesh))
+        previous = ob.get("clayMaterial")
+        previous = previous.to_dict() if hasattr(previous, "to_dict") else previous
+        objects.append((ob, mesh, previous))
         ob.data = copies[mesh][0]
+        tag = materials._nearest(ob)
+        if tag is not None:
+            ob["clayMaterial"] = materials.clay_tag(tag)
     return objects, copies
+
+
+def _box_uvs(mesh):
+    """Sign-aware Blender cube projection, local metres; side V follows +Z.
+
+    Ties use Blender's Z, Y, X priority. Negated V compensates glTF's 1-v for
+    Clay's flipY=True preset textures. These are temporary export meshes only.
+    """
+    for layer in list(mesh.uv_layers):
+        mesh.uv_layers.remove(layer)
+    uv = mesh.uv_layers.new(name="ClayUV")
+    unit = _core.MM / 1000
+    for face in mesh.polygons:
+        nx, ny, nz = face.normal
+        ax, ay, az = abs(nx), abs(ny), abs(nz)
+        for corner in face.loop_indices:
+            x, y, z = mesh.vertices[mesh.loops[corner].vertex_index].co
+            if az >= ax and az >= ay:
+                u, v = x, y if nz >= 0 else -y
+            elif ay >= ax and ay >= az:
+                u, v = -x if ny >= 0 else x, z
+            else:
+                u, v = y if nx >= 0 else -y, z
+            uv.data[corner].uv = (u * unit, -v * unit)
 
 
 def _return_meshes(lent):
     objects, copies = lent
-    for ob, mesh in objects:
+    for ob, mesh, previous in objects:
         ob.data = mesh
+        if previous is None:
+            ob.pop("clayMaterial", None)
+        else:
+            ob["clayMaterial"] = previous
     for mesh, (own, name) in copies.items():
         bpy.data.meshes.remove(own)
         mesh.name = name

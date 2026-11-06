@@ -6,6 +6,25 @@
   &nbsp;sand3d
 </h1>
 
+## Clay fork
+
+This is [ClayEngineAI/sand3d](https://github.com/ClayEngineAI/sand3d), an Apache-2.0
+fork of Sandflow's sand3d. Modified files replace the upstream material vocabulary
+with Clay's 25 starter presets, add `repeat` in tiles per metre, and generate local
+box UVs and `extras.clayMaterial` tags on GLB/glTF export. Textures stay in Clay;
+other viewers use flat fallback colors derived from the presets. The fork also
+adds keyframed animation, easing and animated glTF export. Upstream PyPI and site
+publishing are disabled. The Python import remains `sand3d`. Install this fork
+from GitHub: `pip install git+https://github.com/ClayEngineAI/sand3d.git`.
+
+Countersinks are bounded above the entry plane by their mouth diameter. Unequal
+chamfers reject edges without an adjacent top, bottom, start, or end face.
+
+In Clay, import `applyMaterials` and only the presets the model uses, then call
+`applyMaterials(model.scene, { wood, metal })` before adding it to the scene.
+For example, `s3d.material(part, "wood", repeat=2)` requests two tiles per metre.
+See the [exportable Clay prop](docs/examples/clay_materials.py).
+
 **3D modeling in Python, built for LLMs.**
 
 sand3d is a Python library for writing 3D objects as short programs: profiles, solids,
@@ -56,7 +75,25 @@ s3d.joint("dial_turn", dial, top_band.move(-150), kind="continuous")
 return s3d.assembly("washing_machine", cab, drum, door, drawer, dial, front=front)
 ```
 
-## Export: GLB, URDF, USD, OBJ, STL
+## Animation
+
+Give existing joints values over time, in seconds; group tracks into named clips:
+
+```python
+opening = s3d.clip("open",
+    s3d.keyframes(machine, {0: 0, 1: 110}, joint="door_hinge", ease="in_out_sine"),
+    s3d.keyframes(machine, {0: 0, 1.5: 180}, joint="drawer_slide"),
+)
+s3d.sample(opening, 0.75)
+s3d.export(machine, "washer.gltf", animations=[opening])  # or .glb
+```
+
+Unjointed objects also accept `x/y/z/rx/ry/rz` tracks. Ten standard easing families
+have in/out/in-out variants; custom easing is a function such as `ease=lambda t: t*t`.
+Followers move automatically, and full revolutions survive export. See the
+[animation guide](docs/animation.md) and [runnable example](docs/examples/animation.py).
+
+## Export: glTF, GLB, URDF, USD, OBJ, STL
 
 One call; the file's extension names the format; lengths in metres.
 
@@ -67,6 +104,7 @@ s3d.export(machine, "washer.glb")    # or .urdf, .usda, .obj, .stl
 | format | what it carries | for |
 |---|---|---|
 | **GLB** | meshes, materials, the joints in each node's extras, at the current pose | the web, viewers, game engines |
+| **glTF** | the same asset as JSON plus a companion `.bin`; glTF and GLB accept named animation clips | the web, viewers, game engines |
 | **URDF** | a link per moving part, its joints and their limits, at rest; OBJ meshes beside it | ROS, PyBullet, MuJoCo, Isaac |
 | **USDA** | the same tree in OpenUSD (UsdGeom, UsdPhysics), with the materials | Omniverse, Isaac Sim, USD pipelines |
 | **OBJ**, **STL** | the meshes alone, at the current pose: OBJ Y up, binary STL Z up | any 3D tool, slicers |
@@ -123,6 +161,7 @@ Everything on one flat `s3d.<verb>` surface:
 | edits | `cut` `join` `intersect` `split` `hole` `pocket` `fillet` `chamfer` `shell` `dent` … (15) |
 | frames and placement | `Frame` `face` `edge` `bbox` `local` `at` `transform` `grid` `ring` `along` `snap` |
 | articulation | `joint` `pose` `seat` |
+| animation | `keyframes` `clip` `sample` |
 | assembly | `group` `assembly` `attach` `export` `units` `fingerprint` … (8) |
 | parts and materials | `gear` `knurl` `thread` `material` |
 

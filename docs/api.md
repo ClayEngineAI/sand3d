@@ -101,21 +101,31 @@ gear(name, teeth, module, width, bore=0, angle=20)  # Involute spur gear
 knurl(name, d, h, pitch=None, straight=False)  # Knurled grip; pitch 1 mm by default
 thread(name, d, length, pitch, left=False)  # Threaded rod
 # materials
-material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, emission=None)  # Kind: oak walnut pine birch steel brushed_steel chrome aluminium brass copper painted_metal plastic glossy_plastic rubber glass ceramic fabric velvet leather marble concrete light; color "#rrggbb"
+material(ob, kind, color=None, roughness=None, metallic=None, opacity=None, emission=None, repeat=None)  # Kind: brick ceramic cobbles concrete fabric glass granite grass gravel ice marble metal mud pavers planks plastic rock rust sand sandstone shingles snow soil tarmac wood; color "#rrggbb"; repeat: tiles/metre, a number or (x,y), default (1,1)
 # articulation
 joint(name, child, on, kind='revolute', axis='normal', range=None, follows=None, ratio=1)  # How child moves on the part on was read on: revolute (range in degrees), continuous (no range), prismatic (range in the unit), free (no axis, no range); follows: a child or a joint name, and this joint's value is ratio × its (degrees per unit, or units per degree), no range; returns child
 pose(ob, value, joint=None)  # Move the mechanism: that joint to value (degrees or the unit), an error outside its range; what it carries follows; joint= when child has two
 seat(host, part)  # Take out of host the volume part fills, as it sits at rest; part untouched
+# animation
+keyframes(ob, values=None, *, joint=None, x=None, y=None, z=None, rx=None, ry=None, rz=None, ease="linear")  # {seconds: value} for a joint, or placement offsets; easing name or callable
+clip(name, *tracks)  # Named motion; captures baseline without moving the model
+sample(animation, time)  # Show a clip at seconds, independent of earlier samples
 # assembly
 group(name, *children)  # Parent of children
 assembly(name, *children, **anchors)  # Parts and anchors
 attach(handle, name, *children)  # A detail, under a handle
 Handle(root, **anchors)  # Root and anchors
-export(root, path)  # root and what hangs on it by its joints, in metres: .glb at the current pose, joints in extras; .urdf a link per moving part, at rest, meshes beside it; .usda the URDF's tree as OpenUSD text, with the materials; .obj and .stl its meshes at the current pose
+export(root, path, *, animations=None, fps=60)  # animations=[clip, ...] for .gltf/.glb, baked at fps; .gltf also writes .bin. Without clips: root and what hangs on it by its joints, in metres: .glb at the current pose, joints in extras; .urdf a link per moving part, at rest, meshes beside it; .usda the URDF's tree as OpenUSD text, with the materials; .obj and .stl its meshes at the current pose
 empty_scene()  # Fresh scene
 units(name=None)  # Length unit: "mm" (default), "cm", "m"
 fingerprint()  # Digest of the source
 ```
+
+Countersink cones extend inward from the entry plane. Above it, the cutter stays
+within the mouth diameter, so it does not widen into nearby raised material.
+Unequal positive chamfers, including angle-derived distances, require every
+selected edge to adjoin a top, bottom, start, or end face; unsupported selections
+raise before editing. Equal-distance side chamfers remain supported.
 
 ```python
 def bracket(w=80, d=40, t=6, hole_d=6.6, pitch=50):
@@ -157,3 +167,5 @@ def gate(w=750, h=1200, post=100):
     s3d.pose(leaf, 60)
     return gate
 ```
+
+Animation easing: `linear`, `step`, or `in_`/`out_`/`in_out_` plus `quad`, `cubic`, `quart`, `quint`, `sine`, `expo`, `circ`, `back`, `elastic`, `bounce`. `in`, `out`, `in_out` alias quad. A callable maps normalized interval progress to eased progress; endpoints stay exact. Back/elastic/custom may overshoot; joint limits still apply. Finish building before making clips. Translation and XYZ rotation channels offset the captured placement in its parent frame, rotating about its origin. Jointed parts use scalar joint tracks; followers move automatically. Tracks hold endpoints; duration is the last key. Export leaves the scene unchanged. Custom easing is baked; increase `fps` for fast curves.

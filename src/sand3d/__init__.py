@@ -20,6 +20,7 @@ from .parts import gear, knurl, thread
 from .frames import Frame, along, at, bbox, grid, local, ring, snap, transform
 from .materials import material, resolve as _resolve
 from .joints import joint, placed_again as _placed_again, placed_on as _placed_on, pose
+from .animation import clip, keyframes, sample
 from .profile import Path as _Path, Placed as _Placed, arc, circle, ellipse, mirror, offset, poly, polygon, rect, slot, spline, station, stroke, superellipse, tangent_arc, text, wrap
 from .solids import body, box, cone, cylinder, dome, extrude, helix, loft, revolve, sphere, sweep, torus, tube, wedge, wire
 
@@ -45,6 +46,7 @@ __all__ = [
     "material",
     # articulation
     "joint", "pose", "seat",
+    "clip", "keyframes", "sample",
     # assembly
     "group", "assembly", "attach", "Handle", "export", "empty_scene", "units", "fingerprint",
 ]
