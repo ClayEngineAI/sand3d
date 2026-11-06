@@ -14,10 +14,13 @@ with Clay's 25 starter presets, add `repeat` in tiles per metre, and generate lo
 box UVs and `extras.clayMaterial` tags on GLB/glTF export. Textures stay in Clay;
 other viewers use flat fallback colors derived from the presets. The fork also
 adds keyframed animation, easing and animated glTF export. Upstream PyPI and site
-publishing are disabled. The Python import remains `sand3d`.
+publishing are disabled. The Python import remains `sand3d`. Install this fork
+from GitHub: `pip install git+https://github.com/ClayEngineAI/sand3d.git`.
 
 In Clay, import `applyMaterials` and only the presets the model uses, then call
 `applyMaterials(model.scene, { wood, metal })` before adding it to the scene.
+For example, `s3d.material(part, "wood", repeat=2)` requests two tiles per metre.
+See the [exportable Clay prop](docs/examples/clay_materials.py).
 
 **3D modeling in Python, built for LLMs.**
 
