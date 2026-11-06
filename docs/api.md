@@ -121,6 +121,12 @@ units(name=None)  # Length unit: "mm" (default), "cm", "m"
 fingerprint()  # Digest of the source
 ```
 
+Countersink cones extend inward from the entry plane. Above it, the cutter stays
+within the mouth diameter, so it does not widen into nearby raised material.
+Unequal positive chamfers, including angle-derived distances, require every
+selected edge to adjoin a top, bottom, start, or end face; unsupported selections
+raise before editing. Equal-distance side chamfers remain supported.
+
 ```python
 def bracket(w=80, d=40, t=6, hole_d=6.6, pitch=50):
     plate = s3d.extrude("plate", s3d.rect(w, d, r=4), t)

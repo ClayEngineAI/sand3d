@@ -471,7 +471,9 @@ class FoundByIssues(unittest.TestCase):
         s3d.join(plate, s3d.at(s3d.extrude("Rib", s3d.rect(10, 40), 4), x=W / 2, y=H / 2, z=T))
         with self.assertRaisesRegex(ValueError, r"^chamfer: angle is the face angle in degrees"):
             s3d.chamfer(plate, 2.0, angle=math.radians(1))
-        s3d.chamfer(plate, 2.0, angle=1)
+        with self.assertRaisesRegex(ValueError, r"^chamfer: unequal distances require"):
+            s3d.chamfer(plate, 2.0, angle=1)
+        s3d.chamfer(plate, 2.0, edges="top", angle=1)
         s3d.hole(plate, 8.0, on=(W / 2, H / 2), depth=6.0)
         for x, y in ((10, 10), (W - 10, 10)):
             s3d.hole(plate, 5.0, on=(x, y))

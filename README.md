@@ -17,6 +17,9 @@ adds keyframed animation, easing and animated glTF export. Upstream PyPI and sit
 publishing are disabled. The Python import remains `sand3d`. Install this fork
 from GitHub: `pip install git+https://github.com/ClayEngineAI/sand3d.git`.
 
+Countersinks are bounded above the entry plane by their mouth diameter. Unequal
+chamfers reject edges without an adjacent top, bottom, start, or end face.
+
 In Clay, import `applyMaterials` and only the presets the model uses, then call
 `applyMaterials(model.scene, { wood, metal })` before adding it to the scene.
 For example, `s3d.material(part, "wood", repeat=2)` requests two tiles per metre.

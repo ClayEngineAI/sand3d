@@ -644,7 +644,8 @@ def hole(ob, d, on=(0, 0), depth=None, cbore=None, csk=None):
     where its axis enters the part, from the side the frame's normal points to (a point
     (x, y) faces down onto the part), and runs right through, or `depth` deep.
     `cbore=(D, depth)` adds a counterbore, `csk=(D, angle)` a countersink. Mouth edges
-    are named `hole`."""
+    are named `hole`. Above the entry plane, a countersink is bounded by a cylinder
+    of its mouth diameter; its cone extends inward only."""
     _solids("hole", ob)
     if cbore and not (hasattr(cbore, "__len__") and len(cbore) == 2):
         raise TypeError(f"hole: cbore is (diameter, depth), not {cbore!r}")
@@ -663,7 +664,7 @@ def hole(ob, d, on=(0, 0), depth=None, cbore=None, csk=None):
             pts += [(big / 2, over), (big / 2, -cdepth), (d / 2, -cdepth)]
         elif csk and big > d:  # a countersink no wider than the hole leaves a plain hole
             fall = (big - d) / 2 / math.tan(math.radians(angle) / 2)
-            pts += [(big / 2 + over * math.tan(math.radians(angle) / 2), over), (d / 2, -fall)]
+            pts += [(big / 2, over), (big / 2, 0), (d / 2, -fall)]
         else:
             pts += [(d / 2, over)]
         pts += [(d / 2, bottom), (0, bottom)]
@@ -770,7 +771,7 @@ def _retag(bm, new_faces, kind, name):
     return sorted(new)
 
 
-def _bevel(ob, edges, offset, segments, kind, radius=False, verb=None):
+def _bevel(ob, edges, offset, segments, kind, radius=False, verb=None, cap_edges=False):
     """Bevel the chosen edges by `offset` along each face; with `radius`, `offset` is a
     fillet radius and each edge is set back r·tan(φ/2) for its own bend φ — a true
     radius on a shallow edge as on a square one (edges are bevelled in groups of
@@ -786,6 +787,12 @@ def _bevel(ob, edges, offset, segments, kind, radius=False, verb=None):
     bm.from_mesh(ob.data)
     bm.normal_update()
     chosen = _named_edges(ob, bm, edges) if not callable(edges) else edges(bm)
+    if cap_edges:
+        caps = [lay for lay in bm.faces.layers.bool.values()
+                if lay.name.startswith(_core.FACE_TAG) and _is_cap(lay.name[len(_core.FACE_TAG):])]
+        if any(not any(face[lay] for face in edge.link_faces for lay in caps) for edge in chosen):
+            bm.free()
+            raise ValueError("chamfer: unequal distances require every selected edge to adjoin a top, bottom, start, or end face")
     groups, picks = {}, []
     for e in chosen:
         if radius and len(e.link_faces) == 2:
@@ -967,7 +974,8 @@ def chamfer(ob, d, edges="all", d2=None, angle=None):
 
     Cut the edges named `edges` by `d` on both faces; or `d` on the face the edge is
     named after (`top` for a top edge) and `d2` on the other — or the other at `angle`
-    degrees from it."""
+    degrees from it. Unequal positive distances require every selected edge to adjoin
+    a top, bottom, start, or end face; unsupported side edges raise before editing."""
     _solids("chamfer", ob)
     if angle is not None:
         if not 1 <= angle < 90:
@@ -975,7 +983,8 @@ def chamfer(ob, d, edges="all", d2=None, angle=None):
                              + (" — radians? give degrees" if 0 < angle < 1 else ""))
         d2 = d * math.tan(math.radians(angle))
     base = d if d2 is None else min(d, d2)   # cut equal first, as far as both faces allow
-    bm, faces = _bevel(ob, edges, base, 1, "chamfer", verb="chamfer")
+    unequal = d2 is not None and base > 0 and abs(d2 - d) > _core.mm(1e-9)
+    bm, faces = _bevel(ob, edges, base, 1, "chamfer", verb="chamfer", cap_edges=unequal)
     if d2 is not None and (abs(d2 - base) > _core.mm(1e-9) or abs(d - base) > _core.mm(1e-9)):
         _stretch(bm, faces, base, d, d2)
     _sort_mesh(bm)
